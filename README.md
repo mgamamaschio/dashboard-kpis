@@ -2,7 +2,7 @@
 
 Painel interativo de indicadores de desempenho logístico — com gráficos, tabela de transportadoras e comparativo mensal.
 
-🔗 **[Acessar o dashboard](https://mgamamaschio.github.io/dashboard-kpis)
+🔗 **[Acessar o dashboard](https://mgamamaschio.github.io/dashboard-kpis/)**
 
 ---
 
