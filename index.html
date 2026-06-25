@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard de KPIs Logísticos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&family=DM+Mono:wght@400&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f5f4f1;--s1:#f0efec;--s2:#fff;--border:rgba(0,0,0,.1);
+  --text:#1c1b19;--muted:#6e6c66;--hint:#898781;
+  --blue:#0f4c75;--green:#0f6e56;--green-bg:#e1f5ee;
+  --red:#a32d2d;--red-bg:#fcebeb;--yellow:#7a5c0a;--yellow-bg:#fdf4dc;
+  --mono:'DM Mono',monospace;
+}
+body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:14px;min-height:100vh}
+
+.header{background:var(--s2);border-bottom:0.5px solid var(--border);padding:0 1.5rem;display:flex;align-items:center;justify-content:space-between;height:52px;position:sticky;top:0;z-index:10}
+.logo{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:500}
+.logo-dot{width:8px;height:8px;border-radius:50%;background:var(--blue)}
+.header-right{display:flex;align-items:center;gap:.75rem}
+.periodo-label{font-size:11px;color:var(--muted)}
+select{font-family:inherit;font-size:12px;border:0.5px solid var(--border);border-radius:6px;padding:4px 8px;background:var(--s2);color:var(--text);cursor:pointer;outline:none}
+select:focus{border-color:var(--blue)}
+
+.main{max-width:1100px;margin:0 auto;padding:1.5rem;display:flex;flex-direction:column;gap:1rem}
+
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:.75rem}
+.kpi{background:var(--s1);border-radius:8px;padding:1rem 1.1rem}
+.kpi-label{font-size:10px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:.4rem}
+.kpi-val{font-size:26px;font-weight:300;letter-spacing:-.025em;line-height:1.1}
+.kpi-val.blue{color:var(--blue)}
+.kpi-val.green{color:var(--green)}
+.kpi-val.red{color:var(--red)}
+.kpi-delta{font-size:11px;margin-top:.3rem;font-family:var(--mono)}
+.kpi-delta.up{color:var(--green)}
+.kpi-delta.dn{color:var(--red)}
+
+.charts-row{display:grid;grid-template-columns:1fr 1fr;gap:.75rem}
+.card{background:var(--s2);border:0.5px solid var(--border);border-radius:12px;padding:1.1rem 1.25rem}
+.card-title{font-size:10px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:.75rem}
+.chart-wrap{position:relative;width:100%}
+.legend{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:.65rem}
+.legend-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted)}
+.legend-sq{width:9px;height:9px;border-radius:2px;flex-shrink:0}
+
+.bar-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.bar-label{font-size:11px;color:var(--muted);width:110px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar-track{flex:1;height:8px;background:var(--s1);border-radius:4px;overflow:hidden}
+.bar-fill{height:100%;border-radius:4px;background:#e34948;transition:width .4s ease}
+.bar-val{font-size:11px;color:var(--muted);width:38px;text-align:right;flex-shrink:0;font-family:var(--mono)}
+
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{text-align:left;padding:6px 10px;font-size:10px;font-weight:500;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);border-bottom:0.5px solid var(--border);white-space:nowrap}
+td{padding:8px 10px;border-bottom:0.5px solid var(--border);color:var(--text)}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--bg)}
+
+.badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:500;padding:2px 8px;border-radius:100px}
+.badge::before{content:'';width:4px;height:4px;border-radius:50%;flex-shrink:0}
+.b-ok{background:var(--green-bg);color:var(--green)}.b-ok::before{background:var(--green)}
+.b-warn{background:var(--yellow-bg);color:var(--yellow)}.b-warn::before{background:var(--yellow)}
+.b-bad{background:var(--red-bg);color:var(--red)}.b-bad::before{background:var(--red)}
+
+footer{text-align:center;padding:2rem;font-size:11px;color:var(--hint)}
+
+@media(max-width:700px){
+  .kpi-row{grid-template-columns:1fr 1fr}
+  .charts-row{grid-template-columns:1fr}
+  .main{padding:1rem}
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">
+    <div class="logo-dot"></div>
+    dashboard de KPIs logísticos
+  </div>
+  <div class="header-right">
+    <span class="periodo-label">período:</span>
+    <select id="sel-periodo" onchange="atualizar()">
+      <option value="0">junho 2025</option>
+      <option value="1">maio 2025</option>
+      <option value="2">abril 2025</option>
+    </select>
+  </div>
+</div>
+
+<div class="main">
+
+  <div class="kpi-row">
+    <div class="kpi">
+      <div class="kpi-label">entregas totais</div>
+      <div class="kpi-val blue" id="k-total">—</div>
+      <div class="kpi-delta" id="k-total-d"></div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">no prazo</div>
+      <div class="kpi-val green" id="k-prazo">—</div>
+      <div class="kpi-delta" id="k-prazo-d"></div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">taxa de atraso</div>
+      <div class="kpi-val red" id="k-atraso">—</div>
+      <div class="kpi-delta" id="k-atraso-d"></div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">prazo médio (dias)</div>
+      <div class="kpi-val" id="k-media">—</div>
+      <div class="kpi-delta" id="k-media-d"></div>
+    </div>
+  </div>
+
+  <div class="charts-row">
+    <div class="card">
+      <div class="card-title">volume mensal de entregas</div>
+      <div class="legend">
+        <span class="legend-item"><span class="legend-sq" style="background:#2a78d6"></span>no prazo</span>
+        <span class="legend-item"><span class="legend-sq" style="background:#e34948"></span>atrasadas</span>
+      </div>
+      <div class="chart-wrap" style="height:200px">
+        <canvas id="c-volume" role="img" aria-label="Gráfico de barras com volume mensal de entregas separado por status no prazo e atrasadas"></canvas>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">taxa de atraso por transportadora</div>
+      <div id="bar-transp" style="margin-top:.25rem;padding-top:.1rem"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">desempenho por transportadora</div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>transportadora</th>
+            <th>entregas</th>
+            <th>no prazo</th>
+            <th>atrasos</th>
+            <th>taxa de atraso</th>
+            <th>prazo médio</th>
+            <th>status</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  Mônica Gama · <a href="https://github.com/mgamamaschio" style="color:inherit">github.com/mgamamaschio</a>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+const PERIODOS = [
+  {
+    total:4820,prazo:4562,atraso:258,media:2.4,
+    vol:{labels:['jan','fev','mar','abr','mai','jun'],ok:[810,780,890,870,920,760],late:[42,55,38,48,61,43]},
+    transp:[
+      {nome:'Veloz Cargo',total:920,atrasos:12},
+      {nome:'TransRota',total:840,atrasos:28},
+      {nome:'Expresso Norte',total:780,atrasos:41},
+      {nome:'Cargatex',total:710,atrasos:58},
+      {nome:'Rota Sul Log.',total:650,atrasos:72},
+    ]
+  },
+  {
+    total:4610,prazo:4320,atraso:290,media:2.7,
+    vol:{labels:['dez','jan','fev','mar','abr','mai'],ok:[790,810,780,890,870,720],late:[50,42,55,38,48,48]},
+    transp:[
+      {nome:'Veloz Cargo',total:880,atrasos:18},
+      {nome:'TransRota',total:800,atrasos:32},
+      {nome:'Expresso Norte',total:760,atrasos:49},
+      {nome:'Cargatex',total:690,atrasos:65},
+      {nome:'Rota Sul Log.',total:620,atrasos:80},
+    ]
+  },
+  {
+    total:4390,prazo:4090,atraso:300,media:2.9,
+    vol:{labels:['nov','dez','jan','fev','mar','abr'],ok:[750,790,810,780,890,683],late:[55,50,42,55,38,50]},
+    transp:[
+      {nome:'Veloz Cargo',total:860,atrasos:22},
+      {nome:'TransRota',total:770,atrasos:38},
+      {nome:'Expresso Norte',total:730,atrasos:55},
+      {nome:'Cargatex',total:670,atrasos:72},
+      {nome:'Rota Sul Log.',total:600,atrasos:90},
+    ]
+  }
+];
+
+const MEDIAS = [2.4,2.7,2.9];
+
+let chartVol = null;
+
+function delta(val,prev,inv=false){
+  const diff = val-prev;
+  const pct = prev ? ((diff/prev)*100).toFixed(1) : 0;
+  const up = diff>=0;
+  const good = inv ? !up : up;
+  const sinal = up ? '▲' : '▼';
+  return `<span class="kpi-delta ${good?'up':'dn'}">${sinal} ${Math.abs(pct)}% vs mês anterior</span>`;
+}
+
+function statusBadge(taxa){
+  if(taxa<5) return `<span class="badge b-ok">excelente</span>`;
+  if(taxa<10) return `<span class="badge b-warn">atenção</span>`;
+  return `<span class="badge b-bad">crítico</span>`;
+}
+
+function atualizar(){
+  const idx = +document.getElementById('sel-periodo').value;
+  const d = PERIODOS[idx];
+  const prev = PERIODOS[idx+1];
+
+  document.getElementById('k-total').textContent = d.total.toLocaleString('pt-BR');
+  document.getElementById('k-prazo').textContent = ((d.prazo/d.total)*100).toFixed(1)+'%';
+  document.getElementById('k-atraso').textContent = ((d.atraso/d.total)*100).toFixed(1)+'%';
+  document.getElementById('k-media').textContent = d.media.toFixed(1)+' d';
+
+  if(prev){
+    document.getElementById('k-total-d').innerHTML = delta(d.total,prev.total);
+    document.getElementById('k-prazo-d').innerHTML = delta(d.prazo/d.total,prev.prazo/prev.total);
+    document.getElementById('k-atraso-d').innerHTML = delta(d.atraso/d.total,prev.atraso/prev.total,true);
+    document.getElementById('k-media-d').innerHTML = delta(d.media,prev.media,true);
+  } else {
+    ['k-total-d','k-prazo-d','k-atraso-d','k-media-d'].forEach(id=>document.getElementById(id).innerHTML='');
+  }
+
+  if(chartVol){
+    chartVol.data.labels = d.vol.labels;
+    chartVol.data.datasets[0].data = d.vol.ok;
+    chartVol.data.datasets[1].data = d.vol.late;
+    chartVol.update();
+  } else {
+    chartVol = new Chart(document.getElementById('c-volume'),{
+      type:'bar',
+      data:{
+        labels:d.vol.labels,
+        datasets:[
+          {label:'no prazo',data:d.vol.ok,backgroundColor:'#2a78d6',borderRadius:{topLeft:3,topRight:3},borderSkipped:false},
+          {label:'atrasadas',data:d.vol.late,backgroundColor:'#e34948',borderRadius:{topLeft:3,topRight:3},borderSkipped:false}
+        ]
+      },
+      options:{
+        responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+c.dataset.label+': '+c.parsed.y.toLocaleString('pt-BR')}}},
+        scales:{
+          x:{grid:{display:false},ticks:{font:{size:10},color:'#898781'}},
+          y:{grid:{color:'#e4e2dc'},ticks:{font:{size:10},color:'#898781',callback:v=>v.toLocaleString('pt-BR')},border:{display:false}}
+        }
+      }
+    });
+  }
+
+  const maxAt = Math.max(...d.transp.map(t=>t.atrasos));
+  document.getElementById('bar-transp').innerHTML = d.transp.map(t=>{
+    const pct = Math.round((t.atrasos/maxAt)*100);
+    const taxa = ((t.atrasos/t.total)*100).toFixed(1);
+    return `<div class="bar-row">
+      <span class="bar-label" title="${t.nome}">${t.nome}</span>
+      <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
+      <span class="bar-val">${taxa}%</span>
+    </div>`;
+  }).join('');
+
+  const mediasFixas = [2.1,2.8,3.2,3.5,3.9];
+  document.getElementById('tbody').innerHTML = d.transp.map((t,i)=>{
+    const taxa = (t.atrasos/t.total)*100;
+    const ok = t.total-t.atrasos;
+    return `<tr>
+      <td style="font-weight:500">${t.nome}</td>
+      <td>${t.total.toLocaleString('pt-BR')}</td>
+      <td style="color:#0f6e56">${ok.toLocaleString('pt-BR')}</td>
+      <td style="color:#a32d2d">${t.atrasos}</td>
+      <td style="font-family:${getComputedStyle(document.documentElement).getPropertyValue('--mono')||'monospace'}">${taxa.toFixed(1)}%</td>
+      <td>${mediasFixas[i].toFixed(1)} d</td>
+      <td>${statusBadge(taxa)}</td>
+    </tr>`;
+  }).join('');
+}
+
+atualizar();
+</script>
+</body>
+</html>
